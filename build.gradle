@@ -13,6 +13,11 @@ repositories {
 
 dependencies {
 
+    //logging
+    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2+'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2+'
+    compile group: 'org.apache.logging.log4j', name: 'log4j-jul', version: '2+'
+
     //web server
     compile group: 'io.helidon.webserver', name: 'helidon-webserver', version: '0.+'
     compile group: 'io.helidon.webserver', name: 'helidon-webserver-netty', version: '0.+'

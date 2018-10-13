@@ -17,13 +17,13 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
-public class MainTest {
+public class ServerTest {
 
     private static WebServer webServer;
 
     @BeforeAll
     public static void startTheServer() throws Exception {
-        webServer = Main.startServer();
+        webServer = Server.start();
         while (!webServer.isRunning()) {
             Thread.sleep(1 * 1000);
         }
@@ -40,12 +40,9 @@ public class MainTest {
 
     @Test
     public void testHelloWorld() throws Exception {
-        HttpURLConnection conn;
-
-        String queryString = "{hello}";
 
         JsonObject requestJson = Json.createObjectBuilder()
-                .add("query", queryString)
+                .add("query", "{hello}")
                 .build();
 
         JsonObject expectedData = Json.createObjectBuilder()
@@ -53,7 +50,7 @@ public class MainTest {
                 .build();
 
         String urlString = "http://localhost:" + webServer.port() + "/graphql";
-        conn = postRequest(urlString, requestJson.toString());
+        HttpURLConnection conn = postRequest(urlString, requestJson.toString());
         Assertions.assertEquals(200, conn.getResponseCode());
 
         JsonReader jsonReader = Json.createReader(conn.getInputStream());

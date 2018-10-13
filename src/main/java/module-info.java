@@ -3,6 +3,7 @@ open module systems.cauldron.service.graphql {
     requires io.helidon.common;
     requires io.helidon.webserver.json;
     requires java.logging;
+    requires org.apache.logging.log4j;
     requires java.json;
     requires java.json.bind;
     requires org.eclipse.yasson;

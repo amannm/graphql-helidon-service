@@ -26,7 +26,7 @@ import java.io.StringReader;
 import java.util.Map;
 import java.util.Optional;
 
-public class GraphQueryService implements Service {
+public class GraphService implements Service {
 
     private static final GraphQL graph;
 
