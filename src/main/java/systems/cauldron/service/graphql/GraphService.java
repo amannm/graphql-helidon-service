@@ -65,8 +65,10 @@ public class GraphService implements Service {
         }
 
         String queryString = queryParam.get();
+
         //TODO: handle these too
         Optional<String> operationNameParam = parameters.first("operationName");
+
         Optional<String> variablesParam = parameters.first("variables");
 
         JsonObject resultJson = processQuery(queryString);
@@ -76,60 +78,45 @@ public class GraphService implements Service {
 
 
     public void post(ServerRequest request, ServerResponse response) {
+        request.queryParams()
+                .first("query")
+                .ifPresentOrElse(
+                        queryString -> response.send(processQuery(queryString)),
+                        () -> {
+                            request.headers().contentType().ifPresentOrElse(
+                                    mediaType -> {
+                                        if (MediaType.APPLICATION_JSON.equals(mediaType)) {
+                                            //TODO: handle remaining conditions
+                                            request.content().as(JsonObject.class)
+                                                    .thenAccept(jsonRequest -> {
+                                                        String queryString = jsonRequest.getString("query");
 
-        Parameters parameters = request.queryParams();
-        Optional<String> queryParam = parameters.first("query");
-        if (queryParam.isPresent()) {
+                                                        //TODO: respect/validate these
+                                                        if (jsonRequest.containsKey("operationName")) {
+                                                            String operationName = jsonRequest.getString("operationName");
+                                                        }
 
-            String queryString = queryParam.get();
+                                                        if (jsonRequest.containsKey("variables")) {
+                                                            JsonObject variables = jsonRequest.getJsonObject("variables");
+                                                        }
 
-            JsonObject resultJson = processQuery(queryString);
-            response.send(resultJson);
-
-        } else {
-            Optional<MediaType> mediaTypeResult = request.headers().contentType();
-
-            if (!mediaTypeResult.isPresent()) {
-                response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415).send();
-                return;
-            }
-
-            MediaType mediaType = mediaTypeResult.get();
-            if (MediaType.APPLICATION_JSON.equals(mediaType)) {
-                request.content().as(JsonObject.class).thenAccept(jsonRequest -> {
-
-                    String queryString = jsonRequest.getString("query");
-
-                    //TODO: handle these too
-                    if (jsonRequest.containsKey("operationName")) {
-                        String operationName = jsonRequest.getString("operationName");
-                    }
-
-                    if (jsonRequest.containsKey("variables")) {
-                        JsonObject variables = jsonRequest.getJsonObject("variables");
-                    }
-
-                    JsonObject resultJson = processQuery(queryString);
-                    response.send(resultJson);
-
-                });
-            } else {
-                if ("application/graphql".equals(mediaType.toString())) {
-                    request.content().as(String.class).thenAccept(queryString -> {
-
-                        JsonObject resultJson = processQuery(queryString);
-                        response.send(resultJson);
-
-                    });
-                } else {
-
-                    response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415).send();
-
-                }
-            }
-
-        }
-
+                                                        response.send(processQuery(queryString));
+                                                    });
+                                        } else {
+                                            if ("application/graphql".equals(mediaType.toString())) {
+                                                //TODO: handle remaining conditions
+                                                request.content().as(String.class)
+                                                        .thenAccept(queryString -> {
+                                                            response.send(processQuery(queryString));
+                                                        });
+                                            } else {
+                                                response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415).send();
+                                            }
+                                        }
+                                    },
+                                    () -> response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415).send()
+                            );
+                        });
     }
 
     private static JsonObject processQuery(String queryString) {

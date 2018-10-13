@@ -1,3 +1,10 @@
 # graphql-helidon-service
 
-* Java 11 modularized barebones microservice using Oracle Helidon to expose a GraphQL endpoint
+* target platform: OpenJDK 11
+* has a module-info.java
+* uses Oracle Helidon
+* exposes a minimal GraphQL endpoint
+
+##TODO
+* adapters to backend data providers
+* lots of other stuff
