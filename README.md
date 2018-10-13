@@ -6,5 +6,4 @@
 * exposes a minimal GraphQL endpoint
 
 ## TODO
-* adapters to backend data providers
-* lots of other stuff
+* adapters and wiring between GraphQL and persistence layer
