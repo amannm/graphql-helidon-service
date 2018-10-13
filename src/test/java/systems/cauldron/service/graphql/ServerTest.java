@@ -22,7 +22,7 @@ public class ServerTest {
     private static WebServer webServer;
 
     @BeforeAll
-    public static void startTheServer() throws Exception {
+    public static void startServer() throws Exception {
         webServer = Server.start();
         while (!webServer.isRunning()) {
             Thread.sleep(1 * 1000);
