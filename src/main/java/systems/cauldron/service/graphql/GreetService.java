@@ -17,7 +17,8 @@ public class GreetService implements Service {
 
     @Override
     public final void update(final Routing.Rules rules) {
-        rules.get("/", this::getDefaultMessage)
+        rules
+                .get("/", this::getDefaultMessage)
                 .get("/{name}", this::getMessage)
                 .put("/greeting/{greeting}", this::updateGreeting);
     }

@@ -38,7 +38,7 @@ public class MainTest {
     public void testHelloWorld() throws Exception {
         HttpURLConnection conn;
 
-        conn = getURLConnection("GET", "/greet");
+        conn = getURLConnection("GET", "/graphql");
         Assertions.assertEquals(200, conn.getResponseCode(), "HTTP response1");
         JsonReader jsonReader = Json.createReader(conn.getInputStream());
         JsonObject jsonObject = jsonReader.readObject();

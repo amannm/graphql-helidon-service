@@ -26,7 +26,7 @@ public class Main {
     private static Routing createRouting() {
         return Routing.builder()
                 .register(JsonSupport.get())
-                .register("/greet", new GreetService())
+                .register("/graphql", new GraphQueryService())
                 .build();
     }
 
