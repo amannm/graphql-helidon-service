@@ -2,6 +2,7 @@ package systems.cauldron.service.graphql;
 
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.GraphQLError;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
@@ -16,7 +17,12 @@ import io.helidon.webserver.ServerRequest;
 import io.helidon.webserver.ServerResponse;
 import io.helidon.webserver.Service;
 
-import javax.json.JsonObject;
+import javax.json.*;
+import javax.json.bind.Jsonb;
+import javax.json.bind.JsonbBuilder;
+import java.io.StringReader;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public class GraphQueryService implements Service {
@@ -61,8 +67,8 @@ public class GraphQueryService implements Service {
 
             Optional<String> variablesParam = parameters.first("variables");
 
-            String resultString = handleQuery(queryString);
-            response.send(resultString);
+            JsonObject resultJson = handleQuery(queryString);
+            response.send(resultJson);
 
         } else {
 
@@ -78,9 +84,12 @@ public class GraphQueryService implements Service {
         Parameters parameters = request.queryParams();
         Optional<String> queryParam = parameters.first("query");
         if (queryParam.isPresent()) {
+
             String queryString = queryParam.get();
-            String resultString = handleQuery(queryString);
-            response.send(resultString);
+
+            JsonObject resultJson = handleQuery(queryString);
+            response.send(resultJson);
+
         } else {
             Optional<MediaType> mediaTypeResult = request.headers().contentType();
             if (mediaTypeResult.isPresent()) {
@@ -99,16 +108,16 @@ public class GraphQueryService implements Service {
                             JsonObject variables = jsonRequest.getJsonObject("variables");
                         }
 
-                        String resultString = handleQuery(queryString);
-                        response.send(resultString);
+                        JsonObject resultJson = handleQuery(queryString);
+                        response.send(resultJson);
 
                     });
                 } else {
                     if ("application/graphql".equals(mediaType.toString())) {
                         request.content().as(String.class).thenAccept(queryString -> {
 
-                            String resultString = handleQuery(queryString);
-                            response.send(resultString);
+                            JsonObject resultJson = handleQuery(queryString);
+                            response.send(resultJson);
 
                         });
                     } else {
@@ -122,8 +131,52 @@ public class GraphQueryService implements Service {
 
     }
 
-    private String handleQuery(String queryString) {
+    private static JsonObject handleQuery(String queryString) {
+
         ExecutionResult executionResult = build.execute(queryString);
-        return executionResult.getData().toString();
+
+        Map<String, Object> data = executionResult.toSpecification();
+        JsonObject dataJson = serializeObjectMap(data);
+
+        List<GraphQLError> errors = executionResult.getErrors();
+        JsonArray errorsJson = serializeErrors(errors);
+
+        //TODO: ensure conformance with https://facebook.github.io/graphql/draft/#sec-Data
+        JsonObjectBuilder objectBuilder = Json.createObjectBuilder();
+        if (!errorsJson.isEmpty()) {
+            objectBuilder.add("errors", errorsJson);
+            objectBuilder.add("data", dataJson);
+        } else {
+            if (!dataJson.isEmpty()) {
+                objectBuilder.add("data", dataJson);
+            }
+        }
+        return objectBuilder.build();
     }
+
+    private static JsonArray serializeErrors(List<GraphQLError> errors) {
+        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
+        for (GraphQLError error : errors) {
+            Map<String, Object> stringObjectMap = error.toSpecification();
+            JsonObject jsonObject = serializeObjectMap(stringObjectMap);
+            arrayBuilder.add(jsonObject);
+        }
+        return arrayBuilder.build();
+    }
+
+    private static JsonObject serializeObjectMap(Map<String, Object> map) {
+        //TODO: avoid unnecessary reserialization
+        JsonObjectBuilder objectBuilder = Json.createObjectBuilder();
+        map.forEach((k, v) -> {
+            Jsonb jsonb = JsonbBuilder.create();
+            String result = jsonb.toJson(v);
+            JsonObject jsonResult;
+            try (JsonReader reader = Json.createReader(new StringReader(result))) {
+                jsonResult = reader.readObject();
+            }
+            objectBuilder.add(k, jsonResult);
+        });
+        return objectBuilder.build();
+    }
+
 }
