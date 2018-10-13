@@ -2,7 +2,6 @@ package systems.cauldron.service.graphql;
 
 import graphql.ExecutionResult;
 import graphql.GraphQL;
-import graphql.GraphQLError;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.StaticDataFetcher;
 import graphql.schema.idl.RuntimeWiring;
@@ -17,17 +16,19 @@ import io.helidon.webserver.ServerRequest;
 import io.helidon.webserver.ServerResponse;
 import io.helidon.webserver.Service;
 
-import javax.json.*;
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
+import javax.json.JsonReader;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import java.io.StringReader;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public class GraphQueryService implements Service {
 
-    private static final GraphQL build;
+    private static final GraphQL graph;
 
     static {
         String schema = "type Query{hello: String}";
@@ -42,39 +43,34 @@ public class GraphQueryService implements Service {
         SchemaGenerator schemaGenerator = new SchemaGenerator();
         GraphQLSchema graphQLSchema = schemaGenerator.makeExecutableSchema(typeDefinitionRegistry, runtimeWiring);
 
-        build = GraphQL.newGraphQL(graphQLSchema).build();
+        graph = GraphQL.newGraphQL(graphQLSchema).build();
     }
 
 
     @Override
     public void update(Routing.Rules rules) {
-        //graphql server reference @ https://graphql.org/learn/serving-over-http/
         rules
-                .get("/graphql", this::get)
-                .post("/graphql", this::post);
+                .get(this::get)
+                .post(this::post);
     }
 
     public void get(ServerRequest request, ServerResponse response) {
 
         Parameters parameters = request.queryParams();
         Optional<String> queryParam = parameters.first("query");
-        if (queryParam.isPresent()) {
 
-            String queryString = queryParam.get();
-
-            //TODO: handle these too
-            Optional<String> operationNameParam = parameters.first("operationName");
-
-            Optional<String> variablesParam = parameters.first("variables");
-
-            JsonObject resultJson = handleQuery(queryString);
-            response.send(resultJson);
-
-        } else {
-
-            response.status(Http.Status.BAD_REQUEST_400);
-
+        if (!queryParam.isPresent()) {
+            response.status(Http.Status.BAD_REQUEST_400).send();
+            return;
         }
+
+        String queryString = queryParam.get();
+        //TODO: handle these too
+        Optional<String> operationNameParam = parameters.first("operationName");
+        Optional<String> variablesParam = parameters.first("variables");
+
+        JsonObject resultJson = processQuery(queryString);
+        response.send(resultJson);
 
     }
 
@@ -87,87 +83,61 @@ public class GraphQueryService implements Service {
 
             String queryString = queryParam.get();
 
-            JsonObject resultJson = handleQuery(queryString);
+            JsonObject resultJson = processQuery(queryString);
             response.send(resultJson);
 
         } else {
             Optional<MediaType> mediaTypeResult = request.headers().contentType();
-            if (mediaTypeResult.isPresent()) {
-                MediaType mediaType = mediaTypeResult.get();
-                if (MediaType.APPLICATION_JSON.equals(mediaType)) {
-                    request.content().as(JsonObject.class).thenAccept(jsonRequest -> {
 
-                        String queryString = jsonRequest.getString("query");
+            if (!mediaTypeResult.isPresent()) {
+                response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415).send();
+                return;
+            }
 
-                        //TODO: handle these too
-                        if (jsonRequest.containsKey("operationName")) {
-                            String operationName = jsonRequest.getString("operationName");
-                        }
+            MediaType mediaType = mediaTypeResult.get();
+            if (MediaType.APPLICATION_JSON.equals(mediaType)) {
+                request.content().as(JsonObject.class).thenAccept(jsonRequest -> {
 
-                        if (jsonRequest.containsKey("variables")) {
-                            JsonObject variables = jsonRequest.getJsonObject("variables");
-                        }
+                    String queryString = jsonRequest.getString("query");
 
-                        JsonObject resultJson = handleQuery(queryString);
+                    //TODO: handle these too
+                    if (jsonRequest.containsKey("operationName")) {
+                        String operationName = jsonRequest.getString("operationName");
+                    }
+
+                    if (jsonRequest.containsKey("variables")) {
+                        JsonObject variables = jsonRequest.getJsonObject("variables");
+                    }
+
+                    JsonObject resultJson = processQuery(queryString);
+                    response.send(resultJson);
+
+                });
+            } else {
+                if ("application/graphql".equals(mediaType.toString())) {
+                    request.content().as(String.class).thenAccept(queryString -> {
+
+                        JsonObject resultJson = processQuery(queryString);
                         response.send(resultJson);
 
                     });
                 } else {
-                    if ("application/graphql".equals(mediaType.toString())) {
-                        request.content().as(String.class).thenAccept(queryString -> {
 
-                            JsonObject resultJson = handleQuery(queryString);
-                            response.send(resultJson);
+                    response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415).send();
 
-                        });
-                    } else {
-
-                        response.status(Http.Status.UNSUPPORTED_MEDIA_TYPE_415);
-
-                    }
                 }
             }
+
         }
 
     }
 
-    private static JsonObject handleQuery(String queryString) {
-
-        ExecutionResult executionResult = build.execute(queryString);
-
-        Map<String, Object> data = executionResult.toSpecification();
-        JsonObject dataJson = serializeObjectMap(data);
-
-        List<GraphQLError> errors = executionResult.getErrors();
-        JsonArray errorsJson = serializeErrors(errors);
-
-        //TODO: ensure conformance with https://facebook.github.io/graphql/draft/#sec-Data
-        JsonObjectBuilder objectBuilder = Json.createObjectBuilder();
-        if (!errorsJson.isEmpty()) {
-            objectBuilder.add("errors", errorsJson);
-            objectBuilder.add("data", dataJson);
-        } else {
-            if (!dataJson.isEmpty()) {
-                objectBuilder.add("data", dataJson);
-            }
-        }
-        return objectBuilder.build();
-    }
-
-    private static JsonArray serializeErrors(List<GraphQLError> errors) {
-        JsonArrayBuilder arrayBuilder = Json.createArrayBuilder();
-        for (GraphQLError error : errors) {
-            Map<String, Object> stringObjectMap = error.toSpecification();
-            JsonObject jsonObject = serializeObjectMap(stringObjectMap);
-            arrayBuilder.add(jsonObject);
-        }
-        return arrayBuilder.build();
-    }
-
-    private static JsonObject serializeObjectMap(Map<String, Object> map) {
+    private static JsonObject processQuery(String queryString) {
+        ExecutionResult executionResult = graph.execute(queryString);
+        Map<String, Object> resultMap = executionResult.toSpecification();
         //TODO: avoid unnecessary reserialization
         JsonObjectBuilder objectBuilder = Json.createObjectBuilder();
-        map.forEach((k, v) -> {
+        resultMap.forEach((k, v) -> {
             Jsonb jsonb = JsonbBuilder.create();
             String result = jsonb.toJson(v);
             JsonObject jsonResult;
@@ -177,6 +147,8 @@ public class GraphQueryService implements Service {
             objectBuilder.add(k, jsonResult);
         });
         return objectBuilder.build();
+
     }
+
 
 }

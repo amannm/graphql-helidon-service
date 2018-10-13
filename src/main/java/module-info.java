@@ -1,10 +1,11 @@
-module systems.cauldron.service.graphql {
+open module systems.cauldron.service.graphql {
+    requires io.helidon.webserver;
     requires io.helidon.common;
-    requires java.json;
-    requires java.json.bind;
     requires io.helidon.webserver.json;
     requires java.logging;
+    requires java.json;
+    requires java.json.bind;
+    requires org.eclipse.yasson;
     requires graphql.java;
-    requires io.helidon.webserver;
     exports systems.cauldron.service.graphql;
 }
