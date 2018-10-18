@@ -53,3 +53,12 @@ compileJava {
 }
 
 jib.to.image = 'amannm/graphql-helidon-service'
+
+jar {
+    archiveName = "${project.name}.jar"
+    manifest {
+        attributes ('Main-Class': 'systems.cauldron.service.graphql.Server',
+                'Class-Path': configurations.runtime.files.collect { "libs/$it.name" }.join(' ')
+        )
+    }
+}
