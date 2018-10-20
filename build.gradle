@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'com.google.cloud.tools.jib' version '0.9.13'
 }
 
 group 'systems.cauldron'
@@ -51,8 +50,6 @@ compileJava {
         classpath = files()
     }
 }
-
-jib.to.image = 'amannm/graphql-helidon-service'
 
 jar {
     archiveName = "${project.name}.jar"

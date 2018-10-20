@@ -1,4 +1,4 @@
-open module systems.cauldron.service.graphql {
+module systems.cauldron.service.graphql {
     requires io.helidon.webserver;
     requires io.helidon.common;
     requires io.helidon.webserver.json;
