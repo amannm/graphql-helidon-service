@@ -9,41 +9,38 @@ version '1.0-SNAPSHOT'
 sourceCompatibility = 11
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
 dependencies {
 
     //logging
-    compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2+'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2+'
-    compile group: 'org.apache.logging.log4j', name: 'log4j-jul', version: '2+'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2+'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-slf4j-impl', version: '2+'
+    implementation group: 'org.apache.logging.log4j', name: 'log4j-jul', version: '2+'
 
     //web server
-    compile group: 'io.helidon.webserver', name: 'helidon-webserver', version: '0.+'
-    compile group: 'io.helidon.webserver', name: 'helidon-webserver-netty', version: '0.+'
-    compile group: 'io.helidon.webserver', name: 'helidon-webserver-json', version: '0.+'
-    compile group: 'io.helidon.config', name: 'helidon-config-yaml', version: '0.+'
+    implementation group: 'io.helidon.webserver', name: 'helidon-webserver', version: '1+'
+    implementation group: 'io.helidon.config', name: 'helidon-config-yaml', version: '1+'
+    implementation('io.helidon.media.jsonp:helidon-media-jsonp-server:1+') {
+        exclude group: 'javax.json'
+    }
 
-    //json processing
-    compile group: 'javax.json', name: 'javax.json-api', version: '1+'
-    compile group: 'org.glassfish', name: 'javax.json', version: '1+'
-
-    //json binding
-    compile group: 'javax.json.bind', name: 'javax.json.bind-api', version: '1+'
-    compile group: 'org.eclipse', name: 'yasson', version: '1+'
+    //json handling
+    implementation group: 'org.eclipse', name: 'yasson', version: '1+'
 
     //graphql engine
-    compile group: 'com.graphql-java', name: 'graphql-java', version: '10.0'
+    implementation group: 'com.graphql-java', name: 'graphql-java', version: '10+'
 
     //unit testing
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5+'
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5+'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5+'
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5+'
 
 }
 
 compileJava {
-    inputs.property("moduleName", 'systems.cauldron.service.springboot')
+    inputs.property("moduleName", 'systems.cauldron.service.graphql')
     doFirst {
         options.compilerArgs = [
                 '--module-path', classpath.asPath,

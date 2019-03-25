@@ -1,13 +1,15 @@
 package systems.cauldron.service.graphql;
 
 import io.helidon.config.Config;
+import io.helidon.media.jsonp.server.JsonSupport;
 import io.helidon.webserver.Routing;
 import io.helidon.webserver.ServerConfiguration;
 import io.helidon.webserver.WebServer;
-import io.helidon.webserver.json.JsonSupport;
 
 import java.io.IOException;
 import java.util.logging.LogManager;
+
+import static io.helidon.config.ConfigSources.classpath;
 
 public class Server {
 
@@ -24,13 +26,14 @@ public class Server {
     }
 
     private static ServerConfiguration getConfig() {
-        Config config = Config.create();
-        return ServerConfiguration.fromConfig(config.get("server"));
+        return ServerConfiguration.create(Config.builder()
+                .sources(classpath("application.yaml"))
+                .build());
     }
 
     private static Routing getRouting() {
         return Routing.builder()
-                .register(JsonSupport.get())
+                .register(JsonSupport.create())
                 .register("/graphql", new GraphService())
                 .build();
     }

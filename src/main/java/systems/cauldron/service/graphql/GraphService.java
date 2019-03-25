@@ -17,16 +17,20 @@ import io.helidon.webserver.ServerResponse;
 import io.helidon.webserver.Service;
 
 import javax.json.Json;
+import javax.json.JsonBuilderFactory;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
 import javax.json.JsonReader;
 import javax.json.bind.Jsonb;
 import javax.json.bind.JsonbBuilder;
 import java.io.StringReader;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 
 public class GraphService implements Service {
+
+    private static final JsonBuilderFactory jsonFactory = Json.createBuilderFactory(Collections.emptyMap());
 
     private static final GraphQL graph;
 
@@ -112,7 +116,7 @@ public class GraphService implements Service {
         ExecutionResult executionResult = graph.execute(queryString);
         Map<String, Object> resultMap = executionResult.toSpecification();
         //TODO: avoid unnecessary reserialization
-        JsonObjectBuilder objectBuilder = Json.createObjectBuilder();
+        JsonObjectBuilder objectBuilder = jsonFactory.createObjectBuilder();
         resultMap.forEach((k, v) -> {
             Jsonb jsonb = JsonbBuilder.create();
             String result = jsonb.toJson(v);
@@ -125,6 +129,5 @@ public class GraphService implements Service {
         return objectBuilder.build();
 
     }
-
 
 }
